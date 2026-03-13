@@ -1,0 +1,34 @@
+# Environments
+.env
+.env.local
+
+# Data (Excluding historical raw data and processed features)
+*.csv
+data/raw/
+data/processed/
+results/dashboard_trades.csv
+
+# ML Models (Large binaries and serialized boosters)
+*.json
+*.txt
+*.cbm
+*.pkl
+*.zip
+models/ml/
+models/rl/
+catboost_info/
+
+# Python / Environment
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+.vscode/
+
+# Logs and temporary files
+*.log
+results/predictions/
+results/metrics/
+results/curves/
+results/backtest/

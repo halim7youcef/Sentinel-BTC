@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BTC ML Trading Sentinel</title>
+  <meta name="description" content="Real-time BTC live trading dashboard powered by XGBoost, LightGBM, CatBoost and Random Forest ensemble ML models." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- Lightweight charting library -->
+  <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+  <link rel="stylesheet" href="static/style.css" />
+</head>
+<body>
+
+<!-- ══════════════ HEADER ══════════════ -->
+<header class="header">
+  <div class="header-brand">
+    <div class="brand-icon">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div>
+      <h1 class="brand-title">BTC ML Sentinel</h1>
+      <p class="brand-sub">4-Model Ensemble · Real-time Binance Feed</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="ws-indicator" id="wsIndicator">
+      <span class="ws-dot" id="wsDot"></span>
+      <span id="wsLabel">Connecting…</span>
+    </div>
+    <div class="header-price-block">
+      <span class="header-price-label">BTC/USDT</span>
+      <span class="header-price" id="headerPrice">—</span>
+    </div>
+  </div>
+</header>
+
+<!-- ══════════════ MAIN ══════════════ -->
+<main class="main">
+
+  <!-- ── Row 1: KPI Cards ─────────────────────────────────── -->
+  <section class="kpi-row">
+
+    <div class="kpi-card" id="kpiPrice">
+      <div class="kpi-icon kpi-icon--blue">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <div class="kpi-body">
+        <p class="kpi-label">BTC Price</p>
+        <p class="kpi-value" id="kpiPriceVal">—</p>
+        <p class="kpi-sub" id="kpiPriceChange">—</p>
+      </div>
+      <div class="kpi-pulse" id="pricePulse"></div>
+    </div>
+
+    <div class="kpi-card" id="kpiSignal">
+      <div class="kpi-icon kpi-icon--green">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 20V10M18 20V4M6 20v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <div class="kpi-body">
+        <p class="kpi-label">Current Signal</p>
+        <p class="kpi-value signal-text" id="kpiSignalVal">—</p>
+        <p class="kpi-sub" id="kpiSignalConf">Confidence: —</p>
+      </div>
+    </div>
+
+    <div class="kpi-card" id="kpiProb">
+      <div class="kpi-icon kpi-icon--purple">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 8v4l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <div class="kpi-body">
+        <p class="kpi-label">Ensemble P(UP)</p>
+        <p class="kpi-value" id="kpiProbVal">—</p>
+        <p class="kpi-sub">Calibrated · 4 Models</p>
+      </div>
+    </div>
+
+    <div class="kpi-card" id="kpiBalance">
+      <div class="kpi-icon kpi-icon--gold">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 9l5-5 4 4 5-6 4 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 20h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <div class="kpi-body">
+        <p class="kpi-label">Virtual Balance</p>
+        <p class="kpi-value" id="kpiBalanceVal">$1,000.00</p>
+        <p class="kpi-sub" id="kpiPnl">PnL: —</p>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ── Row 2: Chart + Signal Panel ─────────────────────── -->
+  <section class="row-2">
+
+    <!-- Candlestick chart -->
+    <div class="card chart-card">
+      <div class="card-header">
+        <h2 class="card-title">BTCUSDT · 5m Candles</h2>
+        <div class="chart-controls">
+          <button class="chart-btn active" data-limit="50" id="btn50">50</button>
+          <button class="chart-btn" data-limit="100" id="btn100">100</button>
+          <button class="chart-btn" data-limit="200" id="btn200">200</button>
+          <button class="refresh-btn" id="refreshChart" title="Refresh chart">
+            <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+      <div id="chartContainer" class="chart-container"></div>
+    </div>
+
+    <!-- Signal + Model Breakdown -->
+    <div class="right-panel">
+
+      <!-- Signal Card -->
+      <div class="card signal-card" id="signalCard">
+        <div class="signal-header">
+          <span class="signal-badge" id="signalBadge">HOLD</span>
+          <div class="signal-time" id="signalTime">—</div>
+        </div>
+        <div class="signal-price-row">
+          <div class="signal-price-item">
+            <span class="signal-price-label">Entry Price</span>
+            <span class="signal-price-val" id="signalEntryPrice">—</span>
+          </div>
+          <div class="signal-price-item">
+            <span class="signal-price-label">Stake (Kelly)</span>
+            <span class="signal-price-val stake-val" id="signalStake">—</span>
+          </div>
+        </div>
+
+        <!-- Probability gauge -->
+        <div class="gauge-wrap">
+          <div class="gauge-label-row">
+            <span class="gauge-label-left">Bearish</span>
+            <span class="gauge-center-val" id="gaugeCenterVal">50%</span>
+            <span class="gauge-label-right">Bullish</span>
+          </div>
+          <div class="gauge-track">
+            <div class="gauge-fill" id="gaugeFill" style="width:50%"></div>
+            <div class="gauge-thumb" id="gaugeThumb" style="left:50%"></div>
+          </div>
+        </div>
+
+        <button class="infer-btn" id="inferBtn">
+          <svg viewBox="0 0 24 24" fill="none" width="18" height="18"><path d="M5 3l14 9-14 9V3z" fill="currentColor"/></svg>
+          Run Inference Now
+        </button>
+        <div class="infer-status" id="inferStatus"></div>
+      </div>
+
+      <!-- Model Breakdown -->
+      <div class="card model-card">
+        <div class="card-header">
+          <h2 class="card-title">Model Breakdown</h2>
+          <span class="ensemble-chip">Ensemble</span>
+        </div>
+        <div class="model-list" id="modelList">
+          <div class="model-row" id="mr-xgb">
+            <div class="model-name">
+              <div class="model-dot model-dot--xgb"></div>XGBoost
+            </div>
+            <div class="model-bar-wrap">
+              <div class="model-bar" id="bar-xgb" style="width:50%"></div>
+            </div>
+            <div class="model-prob" id="prob-xgb">—</div>
+          </div>
+          <div class="model-row" id="mr-lgb">
+            <div class="model-name">
+              <div class="model-dot model-dot--lgb"></div>LightGBM
+            </div>
+            <div class="model-bar-wrap">
+              <div class="model-bar model-bar--lgb" id="bar-lgb" style="width:50%"></div>
+            </div>
+            <div class="model-prob" id="prob-lgb">—</div>
+          </div>
+          <div class="model-row" id="mr-cb">
+            <div class="model-name">
+              <div class="model-dot model-dot--cb"></div>CatBoost
+            </div>
+            <div class="model-bar-wrap">
+              <div class="model-bar model-bar--cb" id="bar-cb" style="width:50%"></div>
+            </div>
+            <div class="model-prob" id="prob-cb">—</div>
+          </div>
+          <div class="model-row" id="mr-rf">
+            <div class="model-name">
+              <div class="model-dot model-dot--rf"></div>Random Forest
+            </div>
+            <div class="model-bar-wrap">
+              <div class="model-bar model-bar--rf" id="bar-rf" style="width:50%"></div>
+            </div>
+            <div class="model-prob" id="prob-rf">—</div>
+          </div>
+          <div class="model-row model-row--ensemble">
+            <div class="model-name">
+              <div class="model-dot model-dot--ens"></div>Ensemble
+            </div>
+            <div class="model-bar-wrap">
+              <div class="model-bar model-bar--ens" id="bar-ens" style="width:50%"></div>
+            </div>
+            <div class="model-prob" id="prob-ens">—</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── Row 3: Trade History ─────────────────────────────── -->
+  <section class="card history-card">
+    <div class="card-header">
+      <h2 class="card-title">Trade History</h2>
+      <button class="refresh-btn" id="refreshHistory">
+        <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Refresh
+      </button>
+    </div>
+    <div class="table-wrap">
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th>Time (UTC)</th>
+            <th>BTC Price</th>
+            <th>Signal</th>
+            <th>Ensemble P(UP)</th>
+            <th>Confidence</th>
+            <th>Stake</th>
+            <th>PnL</th>
+            <th>Balance</th>
+          </tr>
+        </thead>
+        <tbody id="historyBody">
+          <tr><td colspan="8" class="empty-row">No trades yet — run inference to begin.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<!-- ══════════════ TOAST ══════════════ -->
+<div class="toast" id="toast"></div>
+
+<script src="static/app.js"></script>
+</body>
+</html>
