@@ -2,6 +2,8 @@
 
 > **Real-time Bitcoin trading intelligence powered by a 4-model ML ensemble and a PPO Transformer agent.**
 
+![Dashboard Preview](assets/dashboard.png)
+
 A complete BTC/USDT algorithmic trading research system that fetches live 5-minute OHLCV data from Binance, computes 38 financial features, runs a calibrated soft-voting ML ensemble, and serves a live paper-trading dashboard. A separate PPO + Transformer reinforcement learning agent is included for research and backtesting.
 
 **All trading is virtual / paper trading. No real orders are placed.**
@@ -322,6 +324,74 @@ model = PPO(
 
 An experimental SAC (Soft Actor-Critic) trainer is also available at `src/train/sac_btc_trainer.py`. The final research model uses PPO due to more stable training on non-stationary time series.
 
+### Training Metrics (Stable-Baselines3)
+
+```text
+-----------------------------------------
+| rollout/                |             |
+|    ep_len_mean          | 4.07e+04    |
+|    ep_rew_mean          | -75         |
+| time/                   |             |
+|    fps                  | 59          |
+|    iterations           | 122         |
+|    time_elapsed         | 8347        |
+|    total_timesteps      | 499712      |
+| train/                  |             |
+|    approx_kl            | 0.024987612 |
+|    clip_fraction        | 0.217       |
+|    clip_range           | 0.2         |
+|    entropy_loss         | -0.653      |
+|    explained_variance   | 0.0373      |
+|    learning_rate        | 0.0001      |
+|    loss                 | 0.0847      |
+|    n_updates            | 1210        |
+|    policy_gradient_loss | -0.0011     |
+|    value_loss           | 0.476       |
+-----------------------------------------
+| rollout/                |             |
+|    ep_rew_mean          | -75         |
+| time/                   |             |
+|    fps                  | 60          |
+|    iterations           | 123         |
+|    time_elapsed         | 8363        |
+|    total_timesteps      | 503808      |
+| train/                  |             |
+|    approx_kl            | 0.021471262 |
+|    clip_fraction        | 0.186       |
+|    clip_range           | 0.2         |
+|    entropy_loss         | -0.594      |
+|    explained_variance   | 0.399       |
+|    learning_rate        | 0.0001      |
+|    loss                 | 0.162       |
+|    n_updates            | 1220        |
+|    policy_gradient_loss | 0.00182     |
+|    value_loss           | 0.403       |
+-----------------------------------------
+```
+
+### Backtest Performance (Attention PPO)
+
+```text
+Starting Run 1 with $100.0 bankroll...
+Loading Attention PPO Brain...
+Progress: 5000 steps...   Current Balance: $124.44
+Progress: 10000 steps...  Current Balance: $145.88
+Progress: 15000 steps...  Current Balance: $129.56
+Progress: 20000 steps...  Current Balance: $141.07
+Progress: 25000 steps...  Current Balance: $168.83
+Progress: 30000 steps...  Current Balance: $137.36
+Progress: 35000 steps...  Current Balance: $142.05
+Progress: 40000 steps...  Current Balance: $107.56
+
+--- Run 1 Results ---
+Final Balance: $128.90
+Highest Point: $171.57
+Lowest Point:  $88.92
+Total steps:   41269
+
+Model survived Run 1.
+```
+
 ---
 
 ## 7. Live Inference Engine
@@ -356,6 +426,16 @@ The `LiveTradingSentinel` class runs a precision-clocked inference loop:
 6. **Sizes** the stake using Kelly criterion on `ensemble_prob` (not the PPO softmax)
 7. **Resolves** the previous candle's trade at the next open
 8. **Logs** every decision to `results/live_trading_logs.csv`
+
+### Live Execution Logs
+
+| Timestamp | BTC Price | Decision | Stake | Confidence | Balance | Ensemble Prob |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 2026-03-12 22:30:08 | 70289.11 | BUY DOWN | 74.87 | 83.16% | $100.0 | 0.5116 |
+| 2026-03-12 22:35:09 | 70224.44 | BUY DOWN | 73.21 | 82.05% | $100.0 | 0.5309 |
+| 2026-03-12 22:40:07 | 70208.38 | BUY DOWN | 69.38 | 79.49% | $100.0 | 0.5381 |
+| 2026-03-12 22:45:07 | 70277.22 | BUY DOWN | 80.37 | 86.85% | $100.0 | 0.5143 |
+| 2026-03-12 22:50:07 | 70326.75 | BUY DOWN | 89.07 | 92.68% | $100.0 | 0.5003 |
 
 **Key implementation fixes in the inference pipeline:**
 
